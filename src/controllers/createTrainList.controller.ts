@@ -2,7 +2,7 @@ import { Response, Request } from "express";
 import { prisma } from "../services/database.services";
 import { redis } from "../services/redis.services";
 export class CreateTrainList {
-    private static allocateSeatNumber:any;
+  private static allocateSeatNumber: any;
 
   static async createTrainList(req: Request, res: Response): Promise<void> {
     try {
@@ -43,15 +43,20 @@ export class CreateTrainList {
         },
       });
 
-    const handleNumberOfSeats =  await redis.set(`TotalSeats:${trainNumber}`,TotalSeats);
-    const expireNumberOfSeats =  await redis.expire(`TotalSeats:${trainNumber}`,60*60);
-    for (let i = 0; i < Classes.length; i++) {
-         await redis.set(`${Classes[i]}:${trainNumber}`,NumberofSeats[i])
-    }
-    for (let i = 0; i < Classes.length; i++) {
-         await redis.expire(`${Classes[i]}:${trainNumber}`,60*60);
-        
-    }
+      const handleNumberOfSeats = await redis.set(
+        `TotalSeats:${trainNumber}`,
+        TotalSeats
+      );
+      const expireNumberOfSeats = await redis.expire(
+        `TotalSeats:${trainNumber}`,
+        60 * 60
+      );
+      for (let i = 0; i < Classes.length; i++) {
+        await redis.set(`${Classes[i]}:${trainNumber}`, NumberofSeats[i]);
+      }
+      for (let i = 0; i < Classes.length; i++) {
+        await redis.expire(`${Classes[i]}:${trainNumber}`, 60 * 60);
+      }
       res.status(201).json({ message: "Train Journey Create" });
     } catch (error) {
       res.status(500).json({ message: "Server Error" });
@@ -98,141 +103,153 @@ export class CreateTrainList {
     }
   }
 
-
-  static async getAllTraindetails(req:Request,res:Response):Promise<void>{
+  static async getAllTraindetails(req: Request, res: Response): Promise<void> {
     try {
-        const data = await prisma.createTrainJourneyDetail.findMany()
-        if(!data){
-            res.status(404).json({message:"No data available"})
-        }
-        res.status(200).json({data:data})
+      const data = await prisma.createTrainJourneyDetail.findMany();
+      if (!data) {
+        res.status(404).json({ message: "No data available" });
+      }
+      res.status(200).json({ data: data });
     } catch (error) {
-        res.status(500).json({message:"Server Error"})
+      res.status(500).json({ message: "Server Error" });
     }
   }
 
-  static async getParticularTrain(req:Request,res:Response):Promise<void>{
+  static async getParticularTrain(req: Request, res: Response): Promise<void> {
     try {
-        const {Arrival,Departure} = req.query;
-        const findTheTrain = await prisma.createTrainJourneyDetail.findMany({
-            where:{
-                Arrival:Arrival as string,
-                Departure:Departure as string
-            }
-        });
-        if(!findTheTrain){
-            res.status(404).json({mesage:"No Train available"})
-        }
-        console.log(Arrival,Departure)
-        console.log(findTheTrain)
-        const responseData = await Promise.all(
-            findTheTrain.map(async (train) => {
-              const classesWithSeats = await Promise.all(
-                train.Classes.map(async (className, index) => {
-                  const redisKey = `${className}:${train.trainNumber}`;
-                  const checkSeats = await redis.get(redisKey);
-                  return {
-                    class: className,
-                    numberofSeats: checkSeats || "N/A", // Fallback if Redis key is missing
-                  };
-                })
-              );
-      
-              // Return transformed train details excluding specific fields
-              const { Classes, NumberofSeats, TotalSeats, ...trainDetails } = train;
-      
+      const { Arrival, Departure } = req.query;
+      const findTheTrain = await prisma.createTrainJourneyDetail.findMany({
+        where: {
+          Arrival: Arrival as string,
+          Departure: Departure as string,
+        },
+      });
+      if (!findTheTrain) {
+        res.status(404).json({ mesage: "No Train available" });
+      }
+      console.log(Arrival, Departure);
+      console.log(findTheTrain);
+      const responseData = await Promise.all(
+        findTheTrain.map(async (train) => {
+          const classesWithSeats = await Promise.all(
+            train.Classes.map(async (className, index) => {
+              const redisKey = `${className}:${train.trainNumber}`;
+              const checkSeats = await redis.get(redisKey);
               return {
-                ...trainDetails,
-                classesWithSeats,
+                class: className,
+                numberofSeats: checkSeats || "N/A", // Fallback if Redis key is missing
               };
             })
           );
-      
-          console.log("Transformed Train Details:", responseData);
-      
-          // Send the response
-          res.status(200).json({ data: responseData });
+
+          const { Classes, NumberofSeats, TotalSeats, ...trainDetails } = train;
+
+          return {
+            ...trainDetails,
+            classesWithSeats,
+          };
+        })
+      );
+
+      console.log("Transformed Train Details:", responseData);
+
+      // Send the response
+      res.status(200).json({ data: responseData });
     } catch (error) {
-        res.status(500).json({message:"Server Error"})
+      res.status(500).json({ message: "Server Error" });
     }
   }
 
-
   static async BookTicket(req: Request, res: Response): Promise<any> {
     try {
-      const { trainNumber } = req.params; 
+      const { trainNumber } = req.params;
       // @ts-ignore
-      const userInfo = req.userInfo as { id: number }; 
-      const { Class, numberOfSeats } = req.body; 
+      const userInfo = req.userInfo as { id: number };
+      const { Class, numberOfSeats } = req.body;
+
       
-      // Validate input data
       if (!trainNumber || !Class || !numberOfSeats) {
         return res.status(400).json({ message: "Invalid input data" });
       }
+
       
-      // Find the train details
       const findTrain = await prisma.createTrainJourneyDetail.findUnique({
         where: { trainNumber: parseInt(trainNumber) },
       });
-  
+
       if (!findTrain) {
         return res.status(404).json({ message: "Train not found" });
       }
-  
+
       if (!findTrain.Classes.includes(Class)) {
-        return res.status(400).json({ message: `Class ${Class} not available on this train` });
+        return res
+          .status(400)
+          .json({ message: `Class ${Class} not available on this train` });
       }
-      
-      // Check available seats in Redis
+
+     
       const redisKey = `${Class}:${trainNumber}`;
       const availableSeats = await redis.get(redisKey);
-  
+
       if (!availableSeats || parseInt(availableSeats) < numberOfSeats) {
-        return res.status(400).json({ message: "Insufficient seats available" });
+        return res
+          .status(400)
+          .json({ message: "Insufficient seats available" });
       }
-  
-      // Decrease the seat count in Redis for the specific class
+
       await redis.set(redisKey, parseInt(availableSeats) - numberOfSeats);
-  
-      // Check and update total seats for the train in Redis
+
+      
       const totalSeatKey = `TotalSeats:${trainNumber}`;
       const getTotalSeats = await redis.get(totalSeatKey);
-  
+
       if (!getTotalSeats || parseInt(getTotalSeats) <= 0) {
         return res.status(400).json({ message: "No seats are available" });
       }
-  
-      await redis.set(totalSeatKey, parseInt(getTotalSeats) - parseInt(numberOfSeats));
-  
-      // Generate PNR number
-      const generatePNRNumber = Math.floor(Math.random() * 1000000) + 1;
-  
-      // Create tickets
-      const tickets = [];
+
+      await redis.set(
+        totalSeatKey,
+        parseInt(getTotalSeats) - parseInt(numberOfSeats)
+      );
+
+
+      let tickets = [];
       for (let i = 0; i < numberOfSeats; i++) {
-        const maxSeats = findTrain.NumberofSeats[findTrain.Classes.indexOf(Class)];
-        const seatNumber = Math.floor(Math.random() * maxSeats) + 1; // Generate number between 1 and maxSeats
-      
+      const generatePNRNumber = Math.floor(Math.random() * 1000000) + 1;
+        const redisKey = `${Class}:${trainNumber}`;
+        const maxSeats = await redis.get(redisKey);
+
+        if (!maxSeats || parseInt(maxSeats) <= 0) {
+          return res
+            .status(400)
+            .json({ message: "No seats available in the selected class" });
+        }
+
+        const seatNumber = Math.floor(Math.random() * parseInt(maxSeats)) + 1;
+
+        // Create a ticket in PostgreSQL
         const ticket = await prisma.ticketDetails.create({
           data: {
             PNRNumber: generatePNRNumber,
             NameOfTrain: findTrain.name as string,
-            TrainNumber: parseInt(trainNumber),
+            TrainNumber: parseInt(trainNumber) ,
             Arrival: findTrain.Arrival,
             Departure: findTrain.Departure,
             DepartureTiming: findTrain.DepartureTiming,
             ArrivalTiming: findTrain.ArrivalTiming,
             SeatNumber: seatNumber,
-            SeatPrice: findTrain.PricesofSeats[findTrain.Classes.indexOf(Class)],
+            SeatPrice:
+              findTrain.PricesofSeats[findTrain.Classes.indexOf(Class)],
             Class,
             userId: userInfo.id,
           },
         });
-      
+
         tickets.push(ticket);
+
+        await redis.set(redisKey, parseInt(maxSeats) - 1);
       }
-      
-  
+
       res.status(200).json({
         message: "Tickets booked successfully",
         tickets,
@@ -242,5 +259,4 @@ export class CreateTrainList {
       res.status(500).json({ message: "Internal Server Error" });
     }
   }
-  
 }

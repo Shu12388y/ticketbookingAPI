@@ -51,7 +51,7 @@ model TicketDetails{
   id Int @id @default(autoincrement())
   PNRNumber Int 
   NameOfTrain String  
-  TrainNumber Int  @unique
+  TrainNumber Int  
   Arrival String
   Departure String
   DepartureTiming DateTime
