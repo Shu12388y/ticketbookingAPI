@@ -1,0 +1,10 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.TrainRouter = void 0;
+const express_1 = require("express");
+const createTrainList_controller_1 = require("../controllers/createTrainList.controller");
+const user_middleware_1 = require("../middleware/user.middleware");
+exports.TrainRouter = (0, express_1.Router)();
+exports.TrainRouter.post("/admin/createtrainlist", createTrainList_controller_1.CreateTrainList.createTrainList);
+exports.TrainRouter.get("/searchtrain", createTrainList_controller_1.CreateTrainList.getParticularTrain);
+exports.TrainRouter.post("/service/book/:trainNumber", user_middleware_1.userMiddleware, createTrainList_controller_1.CreateTrainList.BookTicket);
