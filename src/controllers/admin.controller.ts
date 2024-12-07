@@ -41,11 +41,6 @@ export class AdminController{
     static async adminSignIn(req:Request,res:Response):Promise<void>{
         try {
             const {email,password} = await req.body;
-            // @ts-ignore
-            const adminEmail =  req.adminEmail;
-            if(email != adminEmail){
-                res.status(401).json({message:"Admin Credentials"})
-            }
             if(!email && !password){
                 res.status(404).json({message:"Every Field is required"})
             }

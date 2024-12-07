@@ -8,4 +8,4 @@ export const AdminRouter = Router();
 
 
 AdminRouter.post("/adminsignup",AdminController.adminSignUp);
-AdminRouter.post("/adminsignin",adminMiddleware,AdminController.adminSignIn);
+AdminRouter.post("/adminsignin",AdminController.adminSignIn);
