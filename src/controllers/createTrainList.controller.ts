@@ -44,12 +44,12 @@ export class CreateTrainList {
       });
 
     const handleNumberOfSeats =  await redis.set(`TotalSeats:${trainNumber}`,TotalSeats);
-    const expireNumberOfSeats =  await redis.expire(`TotalSeats:${trainNumber}`,60*60*60);
+    const expireNumberOfSeats =  await redis.expire(`TotalSeats:${trainNumber}`,60*60);
     for (let i = 0; i < Classes.length; i++) {
          await redis.set(`${Classes[i]}:${trainNumber}`,NumberofSeats[i])
     }
     for (let i = 0; i < Classes.length; i++) {
-         await redis.expire(`${Classes[i]}:${trainNumber}`,60*60*60);
+         await redis.expire(`${Classes[i]}:${trainNumber}`,60*60);
         
     }
       res.status(201).json({ message: "Train Journey Create" });
