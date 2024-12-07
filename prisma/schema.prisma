@@ -1,0 +1,75 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User{
+  id  Int @id @default(autoincrement())
+  username String
+  email String @unique
+  password String
+  BookedTicket TicketDetails[]
+}
+
+model CreateTrainJourneyDetail{
+  id Int @id @default(autoincrement())
+  name String
+  trainNumber Int @unique
+  Departure String
+  Arrival String
+  TotalSeats String
+  NumbersofClasses Int
+  Classes String[]
+  NumberofSeats Int[]
+  PricesofSeats Float[]
+  DepartureTiming DateTime
+  ArrivalTiming DateTime
+}
+
+
+
+model Admin {
+    id Int @id @default(autoincrement())
+    email String @unique
+    password String
+    apikey ApiKey[]
+}
+
+
+model TicketDetails{
+  id Int @id @default(autoincrement())
+  PNRNumber Int 
+  NameOfTrain String  
+  TrainNumber Int  @unique
+  Arrival String
+  Departure String
+  DepartureTiming DateTime
+  ArrivalTiming DateTime
+  SeatNumber Int
+  SeatPrice Float
+  Class String
+  userId Int
+  user User @relation(fields: [userId],references: [id])
+}
+
+
+
+
+model ApiKey{
+  id Int @id @default(autoincrement())
+  apikey String
+  adminid Int
+  admin Admin @relation(fields: [adminid],references: [id])
+}
+
